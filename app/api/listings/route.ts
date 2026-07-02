@@ -40,7 +40,18 @@ export async function POST(req: NextRequest) {
   // Block widget-key callers from mutating
   if (auth.role === "widget") return NextResponse.json({ error: "Read-only" }, { status: 403 });
 
-  const body = await req.json();
+  const raw = await req.json();
+  // Map form fields → DB columns (form sends `cars`, table has `parking`)
+  const body = {
+    address: raw.address,
+    suburb: raw.suburb,
+    price: raw.price,
+    type: raw.type,
+    beds: raw.beds,
+    baths: raw.baths,
+    parking: raw.parking ?? raw.cars ?? 0,
+    status: raw.status,
+  };
   try {
     const { data, error } = await supabaseAdmin
       .from("listings")
