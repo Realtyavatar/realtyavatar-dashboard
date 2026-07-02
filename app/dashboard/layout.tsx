@@ -27,12 +27,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-[#EAF1FF]">
       {/* Desktop sidebar */}
-      <div className="hidden lg:block">
+      <div className="hidden md:block">
         <Sidebar />
       </div>
 
       {/* Mobile top bar */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#D9DEE9] flex items-center justify-between px-4 z-40">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#D9DEE9] flex items-center justify-between px-4 z-40">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-[#2342B0] flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-6h6v6" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/></svg>
@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile drawer */}
       {mobileNavOpen && (
-        <div className="lg:hidden">
+        <div className="md:hidden">
           <div
             className="fixed inset-0 bg-black/40 z-40"
             onClick={() => setMobileNavOpen(false)}
@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      <main className="flex-1 mx-4 mt-[72px] mb-6 lg:ml-[318px] lg:mr-6 lg:my-6 min-h-[calc(100vh-48px)]">
+      <main className="flex-1 mx-4 mt-[72px] mb-6 md:ml-[318px] md:mr-6 md:my-6 min-h-[calc(100vh-48px)]">
         {children}
       </main>
     </div>
