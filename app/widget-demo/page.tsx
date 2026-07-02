@@ -18,34 +18,30 @@ interface Property {
   img: string;
 }
 
-const PROPERTIES: Property[] = [
-  { address: "32 Ocean Parade", suburb: "Brighton", price: "$3,200,000", beds: 4, baths: 3, img: "#DBEAFE" },
-  { address: "7 Hillcrest Ave", suburb: "Toorak", price: "$5,800,000", beds: 5, baths: 4, img: "#DCF8E8" },
-  { address: "55 Bay Rd", suburb: "St Kilda", price: "$2,100,000", beds: 3, baths: 2, img: "#EDE9FE" },
-  { address: "14A Collins St", suburb: "Melbourne CBD", price: "$1,850,000", beds: 2, baths: 2, img: "#FEF3C7" },
-];
+// Live wiring to the real widget backend — no mocked replies.
+const WIDGET_API_KEY = process.env.NEXT_PUBLIC_WIDGET_API_KEY ?? "";
+const ORG_ID = process.env.NEXT_PUBLIC_ORG_ID ?? "1";
 
-function getReply(input: string): { text: string; properties?: Property[] } {
-  const q = input.toLowerCase();
-  if (q.includes("beach") || q.includes("ocean") || q.includes("coastal") || q.includes("bayside")) {
-    return { text: "I found some beautiful coastal and bayside properties for you:", properties: PROPERTIES.filter(p => ["Brighton", "St Kilda"].includes(p.suburb)) };
+async function getReply(history: Message[]): Promise<{ text: string }> {
+  try {
+    const res = await fetch("/api/widget/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(WIDGET_API_KEY ? { "X-Widget-Key": WIDGET_API_KEY } : {}),
+      },
+      body: JSON.stringify({
+        messages: history.map(m => ({ role: m.role, content: m.text })),
+        orgId: ORG_ID,
+        source: "widget-demo",
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.reply) return { text: data.reply };
+    return { text: data?.message || "Sorry, I couldn't reach our AI service just now. Please try again in a moment." };
+  } catch {
+    return { text: "Sorry, I couldn't reach our AI service just now. Please try again in a moment." };
   }
-  if (q.includes("budget") || q.includes("under") || q.includes("cheap") || q.includes("afford")) {
-    return { text: "Here are properties within the $2M range:", properties: PROPERTIES.filter(p => !p.price.includes("5,") && !p.price.includes("3,2")) };
-  }
-  if (q.includes("toorak") || q.includes("south yarra") || q.includes("luxury") || q.includes("premium")) {
-    return { text: "Our premium listings in Melbourne's finest suburbs:", properties: PROPERTIES.filter(p => p.suburb === "Toorak") };
-  }
-  if (q.includes("bed") || q.includes("room") || q.includes("family")) {
-    return { text: "Here are some great family-sized properties:", properties: PROPERTIES.filter(p => p.beds >= 3) };
-  }
-  if (q.includes("document") || q.includes("section 32") || q.includes("contract")) {
-    return { text: "I can send you the Section 32 or Contract of Sale for any property. Which listing are you interested in?" };
-  }
-  if (q.includes("hello") || q.includes("hi") || q.includes("hey")) {
-    return { text: "Hi there! I'm Samantha, your AI property guide. I can help you find properties, answer questions, or send documents. What are you looking for?" };
-  }
-  return { text: "Great question! I can help you find properties, check availability, or send you documents like Section 32s and contracts. What suburb or budget are you working with?" };
 }
 
 export default function WidgetDemoPage() {
@@ -69,10 +65,10 @@ export default function WidgetDemoPage() {
     if (!input.trim()) return;
     const userMsg = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", text: userMsg }]);
+    const history = [...messages, { role: "user" as const, text: userMsg }];
+    setMessages(history);
     setTyping(true);
-    await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
-    const reply = getReply(userMsg);
+    const reply = await getReply(history);
     setMessages(prev => [...prev, { role: "assistant", ...reply }]);
     setTyping(false);
 
@@ -82,9 +78,25 @@ export default function WidgetDemoPage() {
     }
   }
 
-  function submitLead() {
+  async function submitLead() {
     setLeadCaptured(true);
     setShowLeadForm(false);
+    try {
+      await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: leadForm.name,
+          email: leadForm.email,
+          phone: leadForm.phone,
+          property: "Widget demo enquiry",
+          requested: "Saved search",
+          orgId: ORG_ID,
+        }),
+      });
+    } catch {
+      // Lead capture is best-effort in the demo — the chat continues either way.
+    }
     setMessages(prev => [...prev, { role: "assistant", text: `Thanks ${leadForm.name}! I've saved your details. One of our agents will follow up shortly. In the meantime, keep exploring listings!` }]);
   }
 

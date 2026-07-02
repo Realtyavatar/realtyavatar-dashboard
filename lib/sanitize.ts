@@ -92,5 +92,8 @@ export function sanitiseHistory(messages: ChatMessage[]): ChatMessage[] {
       ? sanitised.slice(sanitised.length - MAX_HISTORY_MESSAGES)
       : sanitised;
 
-  return trimmed;
+  // Strip leading assistant turns (widget greeting) — LLM APIs require the
+  // conversation to start with a user message.
+  const firstUser = trimmed.findIndex((m) => m.role === "user");
+  return firstUser === -1 ? [] : trimmed.slice(firstUser);
 }

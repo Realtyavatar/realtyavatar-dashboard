@@ -2,3 +2,6 @@ node_modules
 .next
 .env*
 .vercel
+
+# allow the env template to be committed
+!.env.example

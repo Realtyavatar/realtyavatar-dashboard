@@ -8,7 +8,8 @@
  *  1. Message sanitisation (prompt-injection defence)       — lib/sanitize.ts
  *  2. Per-org monthly AI cost cap                           — lib/ai-cost.ts
  *  3. Request size limit (JSON body checked before parsing)
- *  4. CORS: allow all origins (widget is cross-origin)
+ *  4. Origin allowlist — the widget key is public by design, so it is only
+ *     honoured for browser requests from allowed origins — lib/widget-origin.ts
  *
  * Body: { messages: ChatMessage[], context?: SamContext, source?: string, orgId?: string }
  * Response: { reply: string }
@@ -18,6 +19,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sanitiseHistory } from "@/lib/sanitize";
 import { checkCostCap, recordUsage } from "@/lib/ai-cost";
 import { resolveWidgetKey } from "@/lib/widget-auth";
+import { isWidgetOriginAllowed, widgetCorsHeaders } from "@/lib/widget-origin";
 
 // ─── In-memory rate limiter ───────────────────────────────────────────────────
 // Simple sliding window: max 20 requests per IP per minute.
@@ -62,16 +64,11 @@ interface SamContext {
   agencyName?: string;
 }
 
-// ─── CORS helper ──────────────────────────────────────────────────────────────
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+// Headers reflect the request Origin only when it is on the widget allowlist.
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: widgetCorsHeaders(req) });
 }
 
 // ─── System prompt builder ────────────────────────────────────────────────────
@@ -182,7 +179,17 @@ async function callAI(
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const CORS_HEADERS = widgetCorsHeaders(req);
   try {
+    // Origin allowlist — reject browser requests from unapproved sites
+    // before the (public) widget key is even considered.
+    if (!isWidgetOriginAllowed(req)) {
+      return NextResponse.json(
+        { error: "origin_not_allowed", message: "This site is not authorised to use the widget." },
+        { status: 403, headers: CORS_HEADERS }
+      );
+    }
+
     // Per-IP rate limit
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
@@ -258,6 +265,12 @@ export async function POST(req: NextRequest) {
 
     // ── #9 Sanitise conversation history ───────────────────────────────────
     const sanitised = sanitiseHistory(messages);
+    if (sanitised.length === 0) {
+      return NextResponse.json(
+        { error: "at least one user message is required" },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
 
     // ── Build system prompt + call AI ──────────────────────────────────────
     const systemPrompt = buildSystemPrompt(context ?? {});
