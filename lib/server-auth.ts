@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { resolveWidgetKey } from "@/lib/widget-auth";
+import { isWidgetOriginAllowed } from "@/lib/widget-origin";
 import { NextRequest, NextResponse } from "next/server";
 
 const SECRET = new TextEncoder().encode(
@@ -69,8 +70,10 @@ export async function requireAuthOrWidgetKey(
   }
 
   // 2. Try widget API key (server-to-server from realestatesales etc.)
+  // The key is public by design — only honour it when the browser Origin
+  // (if any) is on the widget allowlist.
   const key = req.headers.get("x-widget-key");
-  const resolved = await resolveWidgetKey(key);
+  const resolved = isWidgetOriginAllowed(req) ? await resolveWidgetKey(key) : null;
   if (resolved) {
     // Synthetic read-only session — role "widget" so callers can gate mutations
     return {

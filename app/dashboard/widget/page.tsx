@@ -153,9 +153,14 @@ export default function WidgetSettingsPage() {
             >
               {saved ? "✓ Saved" : saving ? "Saving…" : "Save Changes"}
             </button>
-            <button className="rounded-full border border-[#D1D5DB] bg-white text-[#404756] text-sm font-medium px-5 py-2.5 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+            <a
+              href="/widget-demo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-[#D1D5DB] bg-white text-[#404756] text-sm font-medium px-5 py-2.5 hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+            >
               <ExternalLink size={13} /> Installation Instructions
-            </button>
+            </a>
           </div>
         </div>
 

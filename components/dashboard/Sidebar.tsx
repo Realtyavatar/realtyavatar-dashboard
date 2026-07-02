@@ -33,7 +33,14 @@ const nav = [
   { label: "Account Settings", href: "/dashboard/settings", icon: Settings, badge: 0 },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  /** "mobile" renders the same nav as a full-height drawer panel. */
+  variant?: "desktop" | "mobile";
+  /** Called when a nav link is clicked (used to close the mobile drawer). */
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ variant = "desktop", onNavigate }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const [agent, setAgent] = useState<AgentSession | null>(null);
@@ -54,7 +61,14 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="fixed left-6 top-6 bottom-6 w-[270px] bg-white rounded-[22px] border border-[#D9DEE9] shadow-[0_2px_16px_rgba(0,0,0,0.06)] flex flex-col z-30 overflow-hidden">
+    <aside
+      className={clsx(
+        "bg-white border border-[#D9DEE9] flex flex-col overflow-hidden",
+        variant === "mobile"
+          ? "fixed left-0 top-0 bottom-0 w-[280px] rounded-r-[22px] shadow-2xl z-50"
+          : "fixed left-6 top-6 bottom-6 w-[270px] rounded-[22px] shadow-[0_2px_16px_rgba(0,0,0,0.06)] z-30"
+      )}
+    >
       {/* Logo */}
       <div className="px-6 pt-6 pb-5">
         <div className="flex items-center gap-3">
@@ -73,6 +87,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onNavigate}
               className={clsx(
                 "relative flex items-center gap-3.5 px-4 py-[14px] rounded-xl text-[14px] font-medium transition-colors",
                 active
